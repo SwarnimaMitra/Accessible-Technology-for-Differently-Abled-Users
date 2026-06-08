@@ -176,20 +176,6 @@ Open in browser:
 ```text
 http://localhost:5000
 ```
-
----
-
-## 🔮 Future Enhancements
-
-* Support for additional Indian regional sign languages.
-* Offline accessibility features.
-* Real-time navigation assistance.
-* Multilingual speech and text support.
-* Integration with government accessibility services.
-* AI-powered emergency assistance features.
-
----
-
 ## 🤝 Contributing
 
 Contributions are welcome.
@@ -201,11 +187,7 @@ Contributions are welcome.
 
 ---
 
-## 📜 License
 
-This project is released under the MIT License and is intended for educational, research, and social-impact purposes.
-
----
 
 ## 👩‍💻 Author
 
