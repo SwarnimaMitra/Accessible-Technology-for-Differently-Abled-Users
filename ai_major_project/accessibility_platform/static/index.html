@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Accessibility Platform | India</title>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+        body { margin: 0; background: #f0f4f8; padding: 16px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .card { background: white; border-radius: 24px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #1e3a8a; font-size: 1.4rem; }
+        button, .btn { background: #2563eb; color: white; border: none; padding: 12px 20px; border-radius: 40px; font-size: 1rem; font-weight: bold; width: 100%; margin: 8px 0; cursor: pointer; transition: 0.2s; }
+        button:active { background: #1d4ed8; transform: scale(0.98); }
+        video, canvas { width: 100%; background: #000; border-radius: 20px; margin: 8px 0; }
+        textarea, input { width: 100%; padding: 12px; border-radius: 20px; border: 1px solid #ccc; margin: 8px 0; font-size: 1rem; }
+        .result { background: #eef2ff; padding: 12px; border-radius: 16px; margin-top: 12px; word-break: break-word; }
+        .flex-row { display: flex; gap: 10px; align-items: center; }
+        audio { width: 100%; margin-top: 8px; }
+        .small-text { font-size: 0.8rem; color: #4b5563; }
+        @media (max-width: 480px) { .card { padding: 16px; } }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 style="text-align:center;">🌍 सक्षम Accessibility Platform</h1>
+    <p style="text-align:center;">For the 26 million differently-abled in India</p>
+
+    <!-- Sign Language Recognition -->
+    <div class="card">
+        <h2>🧏 Indian Sign Language → Text & Speech</h2>
+        <video id="signVideo" autoplay playsinline muted></video>
+        <div class="flex-row">
+            <button id="captureSign">📸 Capture Gesture</button>
+            <button id="startSignCamera">📷 Start Camera</button>
+        </div>
+        <div id="signResult" class="result">Recognised sign will appear here</div>
+        <audio id="signAudio" controls></audio>
+    </div>
+
+    <!-- Scene Description -->
+    <div class="card">
+        <h2>🖼️ Scene Description (Visually Impaired)</h2>
+        <video id="sceneVideo" autoplay playsinline muted></video>
+        <div class="flex-row">
+            <button id="captureScene">🔍 Describe Scene</button>
+            <button id="startSceneCamera">📷 Start Camera</button>
+        </div>
+        <div id="sceneResult" class="result">Scene description</div>
+        <audio id="sceneAudio" controls></audio>
+    </div>
+
+    <!-- Speech-to-Text for Impaired Speech -->
+    <div class="card">
+        <h2>🎤 Speech to Text (Impaired Speech)</h2>
+        <button id="recordAudio">🎙️ Start Recording</button>
+        <button id="stopRecord" disabled>⏹️ Stop</button>
+        <div id="sttResult" class="result">Transcription will appear</div>
+    </div>
+
+    <!-- Text Simplification -->
+    <div class="card">
+        <h2>📝 Text Simplifier (Learning Disability)</h2>
+        <textarea id="complexText" rows="3" placeholder="Enter complex English text..."></textarea>
+        <button id="simplifyBtn">✨ Simplify</button>
+        <div id="simplifyResult" class="result">Simplified text</div>
+    </div>
+
+    <!-- Integrations -->
+    <div class="card">
+        <h2>📱 Integrations</h2>
+        <input type="text" id="whatsappNumber" placeholder="WhatsApp number (with country code, e.g., +91XXXXXXXXXX)">
+        <textarea id="whatsappMsg" placeholder="Message content"></textarea>
+        <button id="sendWhatsappBtn">Send WhatsApp</button>
+        <input type="email" id="emailTo" placeholder="Recipient email">
+        <input type="text" id="emailSubject" placeholder="Subject">
+        <textarea id="emailBody" placeholder="Email body"></textarea>
+        <button id="sendEmailBtn">Send Email</button>
+    </div>
+</div>
+
+<script>
+    // Helper: POST request with file/blob
+    async function postFile(url, file, fieldName='file') {
+        let fd = new FormData();
+        fd.append(fieldName, file);
+        let res = await fetch(url, { method: 'POST', body: fd });
+        return await res.json();
+    }
+
+    async function postForm(url, data) {
+        let fd = new FormData();
+        for (let k in data) fd.append(k, data[k]);
+        let res = await fetch(url, { method: 'POST', body: fd });
+        return await res.json();
+    }
+
+    // ---------- Sign Language ----------
+    let signVideo, signStream;
+    document.getElementById('startSignCamera').onclick = async () => {
+        signStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        signVideo = document.getElementById('signVideo');
+        signVideo.srcObject = signStream;
+    };
+    document.getElementById('captureSign').onclick = async () => {
+        let canvas = document.createElement('canvas');
+        canvas.width = signVideo.videoWidth;
+        canvas.height = signVideo.videoHeight;
+        canvas.getContext('2d').drawImage(signVideo, 0, 0);
+        let blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+        let data = await postFile('/predict_sign', blob);
+        document.getElementById('signResult').innerText = "Recognised: " + data.text;
+        if (data.audio_base64) {
+            let audioElem = document.getElementById('signAudio');
+            audioElem.src = "data:audio/wav;base64," + data.audio_base64;
+            audioElem.play();
+        }
+    };
+
+    // ---------- Scene Description ----------
+    let sceneVideo, sceneStream;
+    document.getElementById('startSceneCamera').onclick = async () => {
+        sceneStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        sceneVideo = document.getElementById('sceneVideo');
+        sceneVideo.srcObject = sceneStream;
+    };
+    document.getElementById('captureScene').onclick = async () => {
+        let canvas = document.createElement('canvas');
+        canvas.width = sceneVideo.videoWidth;
+        canvas.height = sceneVideo.videoHeight;
+        canvas.getContext('2d').drawImage(sceneVideo, 0, 0);
+        let blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg'));
+        let data = await postFile('/describe_scene', blob);
+        document.getElementById('sceneResult').innerText = data.description;
+        if (data.audio_base64) {
+            let audio = document.getElementById('sceneAudio');
+            audio.src = "data:audio/wav;base64," + data.audio_base64;
+            audio.play();
+        }
+    };
+
+    // ---------- Speech to Text (Impaired) ----------
+    let mediaRecorder, audioChunks = [];
+    document.getElementById('recordAudio').onclick = async () => {
+        let stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = async () => {
+            let audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            let data = await postFile('/stt_impaired', audioBlob);
+            document.getElementById('sttResult').innerText = data.text;
+        };
+        mediaRecorder.start();
+        document.getElementById('recordAudio').disabled = true;
+        document.getElementById('stopRecord').disabled = false;
+    };
+    document.getElementById('stopRecord').onclick = () => {
+        if (mediaRecorder) mediaRecorder.stop();
+        document.getElementById('recordAudio').disabled = false;
+        document.getElementById('stopRecord').disabled = true;
+    };
+
+    // ---------- Text Simplification ----------
+    document.getElementById('simplifyBtn').onclick = async () => {
+        let text = document.getElementById('complexText').value;
+        let res = await fetch('/simplify_text', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'text=' + encodeURIComponent(text)
+        });
+        let data = await res.json();
+        document.getElementById('simplifyResult').innerHTML = `<strong>Simplified:</strong> ${data.simplified}`;
+    };
+
+    // ---------- Integrations ----------
+    document.getElementById('sendWhatsappBtn').onclick = async () => {
+        let phone = document.getElementById('whatsappNumber').value;
+        let msg = document.getElementById('whatsappMsg').value;
+        let res = await postForm('/send_whatsapp', { phone_number: phone, message: msg });
+        alert(res.status === 'sent' ? 'Message sent!' : 'Error');
+    };
+    document.getElementById('sendEmailBtn').onclick = async () => {
+        let to = document.getElementById('emailTo').value;
+        let subj = document.getElementById('emailSubject').value;
+        let body = document.getElementById('emailBody').value;
+        let res = await postForm('/send_email', { to: to, subject: subj, body: body });
+        alert(res.status === 'sent' ? 'Email sent!' : 'Error');
+    };
+</script>
+</body>
+</html>
